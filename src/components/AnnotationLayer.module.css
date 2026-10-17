@@ -1,0 +1,30 @@
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.label {
+  position: absolute;
+  pointer-events: auto;
+  border: 1px solid var(--line);
+  background: rgba(251, 250, 247, 0.94);
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 1px 7px 2px;
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: nowrap;
+  transition: background 180ms ease, color 180ms ease;
+}
+
+.above { transform: translate(-50%, calc(-100% - 6px)); }
+.below { transform: translate(-50%, 6px); }
+.top { transform: translate(-50%, 0); }
+
+.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #f7f4ee;
+}

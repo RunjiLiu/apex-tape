@@ -1,0 +1,49 @@
+.panel {
+  padding: 12px 14px 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.head h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 560;
+}
+
+.head span, .head em, .source {
+  color: var(--muted);
+  font-size: 12px;
+  font-style: normal;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 12px;
+  margin: 10px 0 0;
+}
+
+.cell { min-width: 0; }
+
+.cell dt {
+  margin: 0;
+  font-size: 10px;
+  letter-spacing: 0.01em;
+  color: var(--muted);
+}
+
+.cell dd {
+  margin: 0;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.up { color: var(--up); }
+.down { color: var(--down); }
+
+.source { margin: 8px 0 0; }

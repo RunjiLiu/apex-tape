@@ -1,0 +1,41 @@
+:root {
+  --bg: #f3f1ec;
+  --panel: #fbfaf7;
+  --ink: #1f2926;
+  --muted: #6e756f;
+  --line: #e6e1d8;
+  --up: #2c6b58;
+  --down: #9a4e46;
+  --accent: #2f4f4a;
+  --font: "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  color-scheme: light;
+  font: 14px/1.45 var(--font);
+  color: var(--ink);
+  background: var(--bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+}
+
+button, input { font: inherit; color: inherit; }
+
+button { cursor: pointer; }
+
+:focus-visible {
+  outline: 2px solid rgba(47, 79, 74, 0.45);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}

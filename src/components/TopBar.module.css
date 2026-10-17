@@ -1,0 +1,113 @@
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+  flex-wrap: wrap;
+}
+
+.identity {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+
+.identity h1 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 560;
+  letter-spacing: 0.02em;
+}
+
+.name { color: var(--muted); font-size: 13px; }
+
+.quote {
+  display: inline-flex;
+  gap: 6px;
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+}
+
+.up { color: var(--up); }
+.down { color: var(--down); }
+
+.note { color: var(--muted); font-size: 12px; }
+
+.tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.chips {
+  display: flex;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #f6f4ef;
+}
+
+.chip, .chipOn {
+  border: none;
+  background: transparent;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 13px;
+  color: var(--muted);
+  transition: background 180ms ease, color 180ms ease;
+}
+
+.chip:hover:not(:disabled) { color: var(--ink); }
+
+.chip:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.chipOn {
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgba(40, 36, 28, 0.06);
+}
+
+.switch, .switchOn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--line);
+  background: transparent;
+  border-radius: 999px;
+  padding: 4px 10px 4px 5px;
+  font-size: 13px;
+  transition: background 180ms ease, border-color 180ms ease;
+}
+
+.switchOn { background: #eef2f0; border-color: #d5e0db; }
+
+.knob {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #c9c3b8;
+  transition: background 180ms ease, transform 180ms ease;
+}
+
+.switchOn .knob { background: var(--accent); }
+
+.demo {
+  border: none;
+  background: var(--accent);
+  color: #f7f4ee;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 13px;
+  transition: background 180ms ease;
+}
+
+.demo:hover:not(:disabled) { background: #283f3b; }
+.demo:disabled { opacity: 0.6; cursor: progress; }
