@@ -50,10 +50,10 @@ function buildContext(frame: MarketFrame, fromIso: string, toIso: string, focusC
     toIso: last.iso,
     close: last.close,
     changePct: first.close === 0 ? null : ((last.close - first.close) / first.close) * 100,
-    macd: frame.oscillators ? macd?.macd ?? null : null,
-    signal: frame.oscillators ? macd?.signal ?? null : null,
-    hist: frame.oscillators ? macd?.hist ?? null : null,
-    rsi: frame.oscillators ? lastRsi(frame, slice.i1) : null,
+    macd: macd?.macd ?? null,
+    signal: macd?.signal ?? null,
+    hist: macd?.hist ?? null,
+    rsi: lastRsi(frame, slice.i1),
     volume,
     focusChart,
   };
@@ -101,10 +101,10 @@ function miss(frame: MarketFrame, userText: string): AskResult {
       toIso: last.iso,
       close: last.close,
       changePct: null,
-      macd: frame.oscillators ? frame.macd[frame.macd.length - 1]?.macd ?? null : null,
-      signal: frame.oscillators ? frame.macd[frame.macd.length - 1]?.signal ?? null : null,
-      hist: frame.oscillators ? frame.macd[frame.macd.length - 1]?.hist ?? null : null,
-      rsi: frame.oscillators ? lastRsi(frame, frame.bars.length - 1) : null,
+      macd: frame.macd[frame.macd.length - 1]?.macd ?? null,
+      signal: frame.macd[frame.macd.length - 1]?.signal ?? null,
+      hist: frame.macd[frame.macd.length - 1]?.hist ?? null,
+      rsi: lastRsi(frame, frame.bars.length - 1),
       volume: last.volume,
       focusChart: 'price',
     },
@@ -268,7 +268,7 @@ export function replyToSelection(
     context,
     selection,
     annotations,
-    assistantText: `${rangeLabel}，收盘从 ${formatPrice(first.close)} 到 ${formatPrice(last.close)}（${change}）。区间高 ${formatPrice(high)}、低 ${formatPrice(low)}，振幅约 ${amplitude.toFixed(1)}%。[[${highId}|高]] 和 [[${lowId}|低]] 是这两条边，[[${markerId}|${up ? '高点' : '低点'}]] 标在极值那一根上。${frame.oscillators ? `结束时 MACD ${context.macd == null ? '—' : formatOsc(context.macd)}，RSI ${context.rsi == null ? '—' : formatRsi(context.rsi)}。` : '这个来源没有 MACD 和 RSI。'}`
+    assistantText: `${rangeLabel}，收盘从 ${formatPrice(first.close)} 到 ${formatPrice(last.close)}（${change}）。区间高 ${formatPrice(high)}、低 ${formatPrice(low)}，振幅约 ${amplitude.toFixed(1)}%。[[${highId}|高]] 和 [[${lowId}|低]] 是这两条边，[[${markerId}|${up ? '高点' : '低点'}]] 标在极值那一根上。结束时 MACD ${context.macd == null ? '—' : formatOsc(context.macd)}，RSI ${context.rsi == null ? '—' : formatRsi(context.rsi)}。`,
   };
 }
 
@@ -312,9 +312,8 @@ export function replyToPoint(frame: MarketFrame, chart: 'price' | 'macd' | 'rsi'
   }
   const where = formatDateLabel(bar.iso);
   const delta = change == null ? '没有前一根可对照' : `较前一根 ${formatPct(change)}`;
-  const indicator = !frame.oscillators
-    ? '这个来源没有 MACD 和 RSI。'
-    : chart === 'macd'
+  const indicator =
+    chart === 'macd'
       ? `MACD ${formatOsc(macd.macd)}，信号 ${formatOsc(macd.signal)}，柱 ${formatOsc(macd.hist)}。`
       : chart === 'rsi'
         ? `RSI ${rsi == null ? '还没有读数' : formatRsi(rsi)}。`
@@ -332,16 +331,6 @@ export function replyToExplain(frame: MarketFrame, chart: 'price' | 'macd' | 'rs
   const focusIso = iso ?? frame.bars[frame.bars.length - 1].iso;
   const context = buildContext(frame, focusIso, focusIso, chart) ?? buildContext(frame, frame.bars[0].iso, frame.bars[frame.bars.length - 1].iso, chart);
   if (!context) return miss(frame, '解释一下这个指标。');
-
-  if (!frame.oscillators && chart !== 'price') {
-    return {
-      userText: '解释一下这个指标。',
-      context,
-      selection: null,
-      annotations: [],
-      assistantText: 'Baidu QQQ 日线没有存 MACD 或 RSI。价格、成交量和右侧因子是这一源自己的。',
-    };
-  }
 
   if (chart === 'macd') {
     let cross = -1;

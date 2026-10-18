@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { frameFor, symbolsFor } from './data/market';
+import { useEffect, useState } from 'react';
+import { frameFor } from './data/market';
 import { replyToExplain, replyToPoint, replyToSelection, replyToText } from './data/reply';
 import { AnnotationLayer } from './components/AnnotationLayer';
 import { AnnotationLegend } from './components/AnnotationLegend';
@@ -10,7 +10,7 @@ import { FactorPanel } from './components/FactorPanel';
 import { SelectionBridge } from './components/SelectionBridge';
 import { TopBar } from './components/TopBar';
 import { useThread } from './state/useThread';
-import { RECENT_TRADING_DAYS, type ChartHandles, type FeedId, type HistoryView, type MenuAction, type MenuState, type SelectMode } from './types';
+import { UNIVERSE, type ChartHandles, type MenuAction, type MenuState, type SelectMode } from './types';
 import styles from './App.module.css';
 
 const HINT: Record<SelectMode['chart'], string> = {
@@ -20,18 +20,13 @@ const HINT: Record<SelectMode['chart'], string> = {
 };
 
 export default function App() {
-  const [feed, setFeed] = useState<FeedId>('twelvedata');
   const [symbol, setSymbol] = useState('AAPL');
-  const [history, setHistory] = useState<HistoryView>('recent');
   const [hoverIso, setHoverIso] = useState<string | null>(null);
   const [handles, setHandles] = useState<ChartHandles | null>(null);
   const [menu, setMenu] = useState<MenuState | null>(null);
   const [selectMode, setSelectMode] = useState<SelectMode | null>(null);
-  const twelveSymbol = useRef('AAPL');
   const thread = useThread();
-  const frame = frameFor(feed, symbol);
-  const symbols = symbolsFor(feed);
-  const longHistory = frame.bars.length > RECENT_TRADING_DAYS + 8;
+  const frame = frameFor(symbol);
   const last = frame.bars[frame.bars.length - 1];
   const prev = frame.bars[frame.bars.length - 2];
   const change = prev ? ((last.close - prev.close) / prev.close) * 100 : 0;
@@ -87,36 +82,14 @@ export default function App() {
       <TopBar
         symbol={frame.symbol}
         name={frame.name}
-        symbols={symbols}
-        feed={feed}
+        symbols={UNIVERSE}
         timeframe={frame.timeframe}
         last={last.close}
         change={change}
         span={`${frame.bars.length} 日 · ${frame.bars[0].iso} – ${last.iso}`}
-        history={longHistory ? history : null}
         interpret={thread.interpret}
         playing={thread.busy}
-        onFeed={(next) => {
-          if (next === feed) return;
-          setHoverIso(null);
-          setSelectMode(null);
-          setMenu(null);
-          setHistory('recent');
-          thread.reset();
-          if (next === 'baidu') {
-            if (feed === 'twelvedata') twelveSymbol.current = symbol;
-            setSymbol('QQQ');
-          } else {
-            setSymbol(twelveSymbol.current);
-          }
-          setFeed(next);
-        }}
-        onHistory={(next) => {
-          setHistory(next);
-          setHoverIso(null);
-        }}
         onSymbol={(next) => {
-          if (feed === 'twelvedata') twelveSymbol.current = next;
           setSymbol(next);
           setHoverIso(null);
           setSelectMode(null);
@@ -136,7 +109,6 @@ export default function App() {
         <div className={styles.stage}>
           <ChartCanvas
             frame={frame}
-            history={longHistory ? history : 'all'}
             selecting={selectMode?.chart ?? null}
             onReady={setHandles}
             onContextMenu={(next) => {
@@ -167,7 +139,7 @@ export default function App() {
           />
         </div>
         <div className={styles.side}>
-          <FactorPanel bar={focus} feed={frame.source} following={hoverIso != null && focus.iso === hoverIso} />
+          <FactorPanel bar={focus} following={hoverIso != null && focus.iso === hoverIso} />
           <AnnotationLegend
             frame={frame}
             annotations={thread.annotations}
@@ -201,7 +173,6 @@ export default function App() {
         <ContextMenu
           menu={menu}
           canClear={thread.context != null}
-          indicators={frame.oscillators}
           onChoose={choose}
           onClose={() => setMenu(null)}
         />

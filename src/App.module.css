@@ -46,7 +46,6 @@
   flex-direction: column;
   border-left: 1px solid var(--line);
   background: var(--panel);
-  overflow: auto;
 }
 
 @media (max-width: 900px) {

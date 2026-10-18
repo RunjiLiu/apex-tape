@@ -1,8 +1,6 @@
 .panel {
   padding: 12px 14px 10px;
   border-bottom: 1px solid var(--line);
-  min-height: 0;
-  overflow: auto;
 }
 
 .head {

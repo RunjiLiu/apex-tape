@@ -1,10 +1,9 @@
 import { formatDateLabel, formatPct, formatPrice } from '../lib/format';
-import type { Bar, FeedId, FactorSnapshot } from '../types';
+import type { Bar } from '../types';
 import styles from './FactorPanel.module.css';
 
 interface FactorPanelProps {
   bar: Bar;
-  feed: FeedId;
   following: boolean;
 }
 
@@ -35,61 +34,26 @@ function tag(value: string | null, table: Record<string, string>): string {
   return table[value] ?? value;
 }
 
-function rank(value: number | null): string {
-  if (value == null) return '—';
-  return String(Math.round(value));
-}
-
-function cellsFor(feed: FeedId, factor: FactorSnapshot, tone: string | undefined): { label: string; value: string; tone?: string }[] {
-  const shared = [
+export function FactorPanel({ bar, following }: FactorPanelProps) {
+  const factor = bar.factor;
+  const tone = factor.trendTag === 'up' ? styles.up : factor.trendTag === 'down' ? styles.down : undefined;
+  const cells: { label: string; value: string; tone?: string }[] = [
     { label: 'trend_tag', value: tag(factor.trendTag, TREND), tone },
     { label: 'vol_tag', value: tag(factor.volTag, VOL) },
-  ];
-  const distances = [
-    { label: 'dist_sma20_pct', value: pct(factor.distSma20Pct) },
-    { label: 'dist_sma50_pct', value: pct(factor.distSma50Pct) },
-    { label: 'dist_ema9_pct', value: pct(factor.distEma9Pct) },
-    { label: 'dist_ema21_pct', value: pct(factor.distEma21Pct) },
-    { label: 'atr_14', value: factor.atr14 == null ? '—' : formatPrice(factor.atr14) },
-  ];
-  if (feed === 'baidu') {
-    return [
-      ...shared,
-      { label: 'ret_1d', value: pct(factor.ret1d) },
-      { label: 'ret_5d', value: pct(factor.ret5d) },
-      { label: 'ret_20d', value: pct(factor.ret20d) },
-      { label: 'ret_60d', value: pct(factor.ret60d) },
-      { label: 'atr_pct', value: pct(factor.atrPct) },
-      { label: 'atr_pct_rank_60', value: rank(factor.atrPctRank60) },
-      { label: 'atr_pct_rank_252', value: rank(factor.atrPctRank252) },
-      { label: 'vol_ratio_20', value: factor.volRatio20 == null ? '—' : `${plain(factor.volRatio20)}×` },
-      { label: 'dist_sma20_pct', value: pct(factor.distSma20Pct) },
-      { label: 'dist_sma50_pct', value: pct(factor.distSma50Pct) },
-      { label: 'dist_sma200_pct', value: pct(factor.distSma200Pct) },
-      { label: 'dist_ema9_pct', value: pct(factor.distEma9Pct) },
-      { label: 'dist_ema21_pct', value: pct(factor.distEma21Pct) },
-      { label: 'atr_14', value: factor.atr14 == null ? '—' : formatPrice(factor.atr14) },
-    ];
-  }
-  return [
-    ...shared,
     { label: 'rs_5d', value: pct(factor.rs5d) },
     { label: 'rs_20d', value: pct(factor.rs20d) },
     { label: 'ret_1d', value: pct(factor.ret1d) },
     { label: 'ret_5d', value: pct(factor.ret5d) },
     { label: 'ret_20d', value: pct(factor.ret20d) },
     { label: 'atr_pct', value: pct(factor.atrPct) },
-    { label: 'atr_pct_rank_20', value: rank(factor.atrPctRank20) },
+    { label: 'atr_pct_rank_20', value: factor.atrPctRank20 == null ? '—' : String(Math.round(factor.atrPctRank20)) },
     { label: 'vol_ratio_20', value: factor.volRatio20 == null ? '—' : `${plain(factor.volRatio20)}×` },
-    ...distances,
+    { label: 'dist_sma20_pct', value: pct(factor.distSma20Pct) },
+    { label: 'dist_sma50_pct', value: pct(factor.distSma50Pct) },
+    { label: 'dist_ema9_pct', value: pct(factor.distEma9Pct) },
+    { label: 'dist_ema21_pct', value: pct(factor.distEma21Pct) },
+    { label: 'atr_14', value: factor.atr14 == null ? '—' : formatPrice(factor.atr14) },
   ];
-}
-
-export function FactorPanel({ bar, feed, following }: FactorPanelProps) {
-  const factor = bar.factor;
-  const tone = factor.trendTag === 'up' ? styles.up : factor.trendTag === 'down' ? styles.down : undefined;
-  const cells = cellsFor(feed, factor, tone);
-  const source = factor.adjustType ? `${factor.dsSource ?? 'ds_baidu'} · ${factor.adjustType}` : (factor.dsSource ?? 'v_ds_bars_indicators');
 
   return (
     <section className={styles.panel} aria-label="当日因子">
@@ -106,7 +70,7 @@ export function FactorPanel({ bar, feed, following }: FactorPanelProps) {
           </div>
         ))}
       </dl>
-      <p className={styles.source}>{source}</p>
+      <p className={styles.source}>{factor.dsSource ?? 'v_ds_bars_indicators'}</p>
     </section>
   );
 }
