@@ -34,23 +34,40 @@ export interface Annotation {
   messageAnchor?: string;
 }
 
+export type FeedId = 'twelvedata' | 'baidu';
+
+export type HistoryView = 'recent' | 'all';
+
+/** About two years of sessions. Long histories open on this window. */
+export const RECENT_TRADING_DAYS = 504;
+
+export const FEEDS: { id: FeedId; label: string }[] = [
+  { id: 'twelvedata', label: 'Twelve Data (4 symbols, 180d)' },
+  { id: 'baidu', label: 'Baidu QQQ (long history)' },
+];
+
 export interface FactorSnapshot {
   ret1d: number | null;
   ret5d: number | null;
   ret20d: number | null;
+  ret60d: number | null;
   rs5d: number | null;
   rs20d: number | null;
   atr14: number | null;
   atrPct: number | null;
   atrPctRank20: number | null;
+  atrPctRank60: number | null;
+  atrPctRank252: number | null;
   distSma20Pct: number | null;
   distSma50Pct: number | null;
+  distSma200Pct: number | null;
   distEma9Pct: number | null;
   distEma21Pct: number | null;
   volRatio20: number | null;
   trendTag: string | null;
   volTag: string | null;
   dsSource: string | null;
+  adjustType: string | null;
 }
 
 export interface Bar {
@@ -74,6 +91,8 @@ export interface MarketFrame {
   symbol: string;
   name: string;
   timeframe: Timeframe;
+  source: FeedId;
+  oscillators: boolean;
   bars: Bar[];
   macd: MacdPoint[];
   rsi: Array<number | null>;
@@ -125,18 +144,18 @@ export interface SelectMode {
 
 export interface ChartHandles {
   priceChart: IChartApi;
-  macdChart: IChartApi;
-  rsiChart: IChartApi;
+  macdChart: IChartApi | null;
+  rsiChart: IChartApi | null;
   candle: ISeriesApi<'Candlestick'>;
   volume: ISeriesApi<'Histogram'>;
-  macdLine: ISeriesApi<'Line'>;
-  macdSignal: ISeriesApi<'Line'>;
-  macdHist: ISeriesApi<'Histogram'>;
-  rsiLine: ISeriesApi<'Line'>;
+  macdLine: ISeriesApi<'Line'> | null;
+  macdSignal: ISeriesApi<'Line'> | null;
+  macdHist: ISeriesApi<'Histogram'> | null;
+  rsiLine: ISeriesApi<'Line'> | null;
   panes: {
     price: HTMLDivElement;
-    macd: HTMLDivElement;
-    rsi: HTMLDivElement;
+    macd: HTMLDivElement | null;
+    rsi: HTMLDivElement | null;
   };
 }
 

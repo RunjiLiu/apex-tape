@@ -47,14 +47,17 @@ export function formatRangeLabel(fromIso: string, toIso: string, timeframe: Time
   return `${formatDateLabel(fromIso)} – ${formatDateLabel(toIso)}`;
 }
 
-export function formatTick(time: number, intraday: boolean): string {
+export function formatTick(time: number, intraday: boolean, yearly = false): string {
   const date = new Date(time * 1000);
   const month = date.getUTCMonth() + 1;
   const day = date.getUTCDate();
-  if (!intraday) return `${month}/${day}`;
-  const hh = String(date.getUTCHours()).padStart(2, '0');
-  const mm = String(date.getUTCMinutes()).padStart(2, '0');
-  return `${hh}:${mm}`;
+  if (intraday) {
+    const hh = String(date.getUTCHours()).padStart(2, '0');
+    const mm = String(date.getUTCMinutes()).padStart(2, '0');
+    return `${hh}:${mm}`;
+  }
+  if (yearly) return `${date.getUTCFullYear()}/${month}`;
+  return `${month}/${day}`;
 }
 
 export function withAlpha(color: string, alpha: number): string {

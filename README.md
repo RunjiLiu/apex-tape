@@ -1,6 +1,6 @@
 # LMDA desk
 
-A single-page chart for one symbol. Candles, volume, MACD, and RSI come from a DuckDB view. A mock conversation can draw annotations back onto those series. Nothing here calls a language model.
+A single-page chart. Candles and volume come from one selected DuckDB source at a time. Twelve Data also supplies MACD and RSI. A mock conversation can draw annotations back onto those series. Nothing here calls a language model.
 
 ## Run
 
@@ -17,21 +17,29 @@ npm run build
 
 ## Data
 
-Default source is the read-only database:
+Both sources are read from the same database, and the page never mixes their volumes:
 
 `/cursor/stores/store-660504dc-3643-423f-8daa-b0df0ebd73a0/trading.duckdb`
 
-View: `v_ds_bars_indicators`.
+The top bar switches sources.
 
-Symbols: AAPL, GOOGL, NVDA, QQQ. 180 daily bars each (720 rows), 2026-01-30 through 2026-10-16. The chart loads the full series; it does not clip to the last month. OHLC, volume, `rsi_14`, `macd`, `macd_signal`, and `macd_hist` are plotted as stored. The right-hand factor list shows `trend_tag`, `vol_tag`, `rs_5d`, `rs_20d`, returns, ATR, moving-average distance, `vol_ratio_20`, and `ds_source` for the latest bar, or the bar under the crosshair. `ret_20d` and `dist_sma50_pct` stay empty during the warm-up and then fill in; the sidebar prints an em dash until a value exists.
-
-The browser cannot open DuckDB, so `scripts/export_bars.py` snapshots the view into `src/data/bars.ts`. That file is what the page imports. If the store path is missing, the script also looks at `/workspace/trading.duckdb`.
+**Twelve Data (4 symbols, 180d)** is the default. View: `v_ds_bars_indicators`. Symbols: AAPL, GOOGL, NVDA, QQQ. 180 daily bars each (720 rows), 2026-01-30 through 2026-10-16. The chart shows the full series. OHLC, volume, `rsi_14`, `macd`, `macd_signal`, and `macd_hist` are plotted as stored. The sidebar shows `trend_tag`, `vol_tag`, `rs_5d`, `rs_20d`, returns, ATR, moving-average distance, `vol_ratio_20`, and `ds_source` for the latest bar, or the bar under the crosshair. `ret_20d` and `dist_sma50_pct` stay empty during the warm-up and then fill in; the sidebar prints an em dash until a value exists.
 
 ```bash
 python3 scripts/export_bars.py
 ```
 
-Needs Python `duckdb`. Weekly and intraday chips stay disabled: this view is daily only.
+That writes `src/data/bars.ts`.
+
+**Baidu QQQ (long history)** is QQQ only. Bars: `v_bars_baidu_daily` (also `bars_baidu`), 6945 rows, 1999-03-10 through 2026-10-16, `adjust_type=split_only`. Factors: `ds_baidu_qqq_daily`, joined on `symbol` + `trade_date` + `ts_et`. The sidebar uses those fields, including `ret_60d`, `dist_sma200_pct`, `atr_pct_rank_60`, `atr_pct_rank_252`, `trend_tag`, and `vol_tag`. This table has no MACD or RSI, so those panes stay off and their volumes are not borrowed from Twelve Data. The chart loads every bar and opens on about the last two years; **近2年** and **全部** switch the window, and you can pan into the rest of the history.
+
+```bash
+python3 scripts/export_bars_baidu.py
+```
+
+That writes `src/data/bars_baidu_qqq.ts`.
+
+The browser cannot open DuckDB, so the page imports those snapshots. If the store path is missing, each script also looks at `/workspace/trading.duckdb`. Needs Python `duckdb`. Weekly and intraday chips stay disabled: both feeds are daily only.
 
 ## Annotation schema
 

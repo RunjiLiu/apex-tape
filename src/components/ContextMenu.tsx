@@ -13,11 +13,12 @@ const ITEMS: Array<{ id: MenuAction; label: string; hint: string }> = [
 interface ContextMenuProps {
   menu: MenuState;
   canClear: boolean;
+  indicators: boolean;
   onChoose: (action: MenuAction) => void;
   onClose: () => void;
 }
 
-export function ContextMenu({ menu, canClear, onChoose, onClose }: ContextMenuProps) {
+export function ContextMenu({ menu, canClear, indicators, onChoose, onClose }: ContextMenuProps) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -38,6 +39,7 @@ export function ContextMenu({ menu, canClear, onChoose, onClose }: ContextMenuPr
   const disabled = (action: MenuAction): boolean => {
     if (action === 'clear') return !canClear;
     if (action === 'select-trend') return menu.chart !== 'price';
+    if (action === 'select-indicator') return !indicators;
     if (action === 'ask-point') return menu.iso == null;
     return false;
   };

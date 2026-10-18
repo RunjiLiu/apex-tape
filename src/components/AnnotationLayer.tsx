@@ -21,12 +21,12 @@ export function AnnotationLayer({ handles, frame, annotations, highlight, onActi
 
   useEffect(() => {
     if (!handles) return;
-    const bindings = [
+    const bindings: { id: string; series: ChartHandles['candle'] | NonNullable<ChartHandles['macdLine']> | ChartHandles['volume'] }[] = [
       { id: 'price', series: handles.candle },
       { id: 'volume', series: handles.volume },
-      { id: 'macd', series: handles.macdLine },
-      { id: 'rsi', series: handles.rsiLine },
     ];
+    if (handles.macdLine) bindings.push({ id: 'macd', series: handles.macdLine });
+    if (handles.rsiLine) bindings.push({ id: 'rsi', series: handles.rsiLine });
     const primitives = bindings.map((binding) => {
       const primitive = new AnnotationPrimitive(binding.id, () => stateRef.current);
       binding.series.attachPrimitive(primitive);
@@ -49,7 +49,7 @@ export function AnnotationLayer({ handles, frame, annotations, highlight, onActi
   useEffect(() => {
     if (!handles) return;
     const bump = () => setViewTick((value) => value + 1);
-    const charts = [handles.priceChart, handles.macdChart, handles.rsiChart];
+    const charts = [handles.priceChart, handles.macdChart, handles.rsiChart].filter((chart): chart is NonNullable<typeof chart> => chart != null);
     charts.forEach((chart) => {
       chart.timeScale().subscribeVisibleLogicalRangeChange(bump);
       chart.timeScale().subscribeSizeChange(bump);
@@ -76,25 +76,29 @@ export function AnnotationLayer({ handles, frame, annotations, highlight, onActi
 
   return (
     <>
-      {(Object.keys(groups) as Array<keyof typeof groups>).map((pane) => createPortal(
-        <div className={styles.overlay}>
-          {groups[pane].map((label) => (
-            <button
-              key={label.id}
-              type="button"
-              className={`${styles.label} ${styles[label.placement]} ${label.active ? styles.active : ''}`}
-              style={{ left: label.x, top: label.placement === 'top' ? 8 : label.y, borderColor: label.color }}
-              onClick={(event) => {
-                event.stopPropagation();
-                onActivate(label.id);
-              }}
-            >
-              {label.text}
-            </button>
-          ))}
-        </div>,
-        handles.panes[pane],
-      ))}
+      {(Object.keys(groups) as Array<keyof typeof groups>).map((pane) => {
+        const target = handles.panes[pane];
+        if (!target) return null;
+        return createPortal(
+          <div className={styles.overlay}>
+            {groups[pane].map((label) => (
+              <button
+                key={label.id}
+                type="button"
+                className={`${styles.label} ${styles[label.placement]} ${label.active ? styles.active : ''}`}
+                style={{ left: label.x, top: label.placement === 'top' ? 8 : label.y, borderColor: label.color }}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onActivate(label.id);
+                }}
+              >
+                {label.text}
+              </button>
+            ))}
+          </div>,
+          target,
+        );
+      })}
     </>
   );
 }

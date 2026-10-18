@@ -19,7 +19,7 @@ interface Drag {
   x1: number;
 }
 
-function chartOf(handles: ChartHandles, chart: SelectMode['chart']): IChartApi {
+function chartOf(handles: ChartHandles, chart: SelectMode['chart']): IChartApi | null {
   if (chart === 'macd') return handles.macdChart;
   if (chart === 'rsi') return handles.rsiChart;
   return handles.priceChart;
@@ -38,6 +38,7 @@ export function SelectionBridge({ handles, frame, mode, onComplete, onCancel }: 
     if (!handles || !mode) return;
     const pane = handles.panes[mode.chart];
     const chart = chartOf(handles, mode.chart);
+    if (!pane || !chart) return;
     chart.applyOptions({ handleScroll: false, handleScale: false });
     let startX = 0;
     let currentX = 0;
@@ -98,6 +99,7 @@ export function SelectionBridge({ handles, frame, mode, onComplete, onCancel }: 
   if (!handles || !drag) return null;
   const pane = handles.panes[drag.chart];
   const chart = chartOf(handles, drag.chart);
+  if (!pane || !chart) return null;
   const bottom = chart.timeScale().height();
   const left = Math.min(drag.x0, drag.x1);
   const width = Math.max(1, Math.abs(drag.x1 - drag.x0));
