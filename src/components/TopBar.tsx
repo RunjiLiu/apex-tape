@@ -1,5 +1,5 @@
 import { formatPct, formatPrice } from '../lib/format';
-import { TIMEFRAME_LABEL, type Timeframe } from '../types';
+import { TIMEFRAME_LABEL, type HistoryView, type Timeframe } from '../types';
 import styles from './TopBar.module.css';
 
 interface TopBarProps {
@@ -10,8 +10,10 @@ interface TopBarProps {
   last: number;
   change: number;
   span: string;
+  history: HistoryView | null;
   interpret: boolean;
   playing: boolean;
+  onHistory: (history: HistoryView) => void;
   onSymbol: (symbol: string) => void;
   onInterpret: (value: boolean) => void;
   onDemo: () => void;
@@ -25,8 +27,10 @@ export function TopBar({
   last,
   change,
   span,
+  history,
   interpret,
   playing,
+  onHistory,
   onSymbol,
   onInterpret,
   onDemo,
@@ -68,6 +72,28 @@ export function TopBar({
             {TIMEFRAME_LABEL.I}
           </button>
         </div>
+        {history && (
+          <div className={styles.chips} role="tablist" aria-label="视野">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={history === 'recent'}
+              className={history === 'recent' ? styles.chipOn : styles.chip}
+              onClick={() => onHistory('recent')}
+            >
+              近2年
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={history === 'all'}
+              className={history === 'all' ? styles.chipOn : styles.chip}
+              onClick={() => onHistory('all')}
+            >
+              全部
+            </button>
+          </div>
+        )}
         <button
           type="button"
           role="switch"

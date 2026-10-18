@@ -10,7 +10,7 @@ import { FactorPanel } from './components/FactorPanel';
 import { SelectionBridge } from './components/SelectionBridge';
 import { TopBar } from './components/TopBar';
 import { useThread } from './state/useThread';
-import { UNIVERSE, type ChartHandles, type MenuAction, type MenuState, type SelectMode } from './types';
+import { RECENT_TRADING_DAYS, UNIVERSE, type ChartHandles, type HistoryView, type MenuAction, type MenuState, type SelectMode } from './types';
 import styles from './App.module.css';
 
 const HINT: Record<SelectMode['chart'], string> = {
@@ -21,12 +21,14 @@ const HINT: Record<SelectMode['chart'], string> = {
 
 export default function App() {
   const [symbol, setSymbol] = useState('AAPL');
+  const [history, setHistory] = useState<HistoryView>('recent');
   const [hoverIso, setHoverIso] = useState<string | null>(null);
   const [handles, setHandles] = useState<ChartHandles | null>(null);
   const [menu, setMenu] = useState<MenuState | null>(null);
   const [selectMode, setSelectMode] = useState<SelectMode | null>(null);
   const thread = useThread();
   const frame = frameFor(symbol);
+  const longHistory = frame.bars.length > RECENT_TRADING_DAYS + 8;
   const last = frame.bars[frame.bars.length - 1];
   const prev = frame.bars[frame.bars.length - 2];
   const change = prev ? ((last.close - prev.close) / prev.close) * 100 : 0;
@@ -87,10 +89,13 @@ export default function App() {
         last={last.close}
         change={change}
         span={`${frame.bars.length} 日 · ${frame.bars[0].iso} – ${last.iso}`}
+        history={longHistory ? history : null}
         interpret={thread.interpret}
         playing={thread.busy}
+        onHistory={setHistory}
         onSymbol={(next) => {
           setSymbol(next);
+          setHistory('recent');
           setHoverIso(null);
           setSelectMode(null);
           setMenu(null);
@@ -109,6 +114,7 @@ export default function App() {
         <div className={styles.stage}>
           <ChartCanvas
             frame={frame}
+            history={longHistory ? history : 'all'}
             selecting={selectMode?.chart ?? null}
             onReady={setHandles}
             onContextMenu={(next) => {

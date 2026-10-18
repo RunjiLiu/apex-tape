@@ -1,6 +1,6 @@
 # LMDA desk
 
-A single-page chart for one symbol. Candles, volume, MACD, and RSI come from a DuckDB view. A mock conversation can draw annotations back onto those series. Nothing here calls a language model.
+A single-page chart. Candles, volume, and factors come from the daily tables. MACD and RSI are drawn where the indicator table has a row. A mock conversation can draw annotations back onto those series. Nothing here calls a language model.
 
 ## Run
 
@@ -17,21 +17,23 @@ npm run build
 
 ## Data
 
-Default source is the read-only database:
+One database, one path. The page does not offer a vendor switcher, and the sidebar does not show the raw `source` column.
 
 `/cursor/stores/store-660504dc-3643-423f-8daa-b0df0ebd73a0/trading.duckdb`
 
-View: `v_ds_bars_indicators`.
+- `bars_daily` — OHLC and volume. AAPL, GOOGL, and NVDA have 180 sessions (2026-01-30 through 2026-10-16). QQQ has 6945 sessions (1999-03-10 through 2026-10-16).
+- `ds_indicators_daily` — factors joined on `symbol` + `trade_date`: returns, relative strength, ATR, `dist_sma20_pct`, `dist_sma50_pct`, `dist_sma200_pct`, `trend_tag`, `vol_tag`, and the related fields.
+- `indicators_daily` — `rsi_14`, `macd`, `macd_signal`, `macd_hist` for the same four symbols on the short window only (720 rows). Older QQQ sessions leave those panes blank.
 
-Symbols: AAPL, GOOGL, NVDA, QQQ. 180 daily bars each (720 rows), 2026-01-30 through 2026-10-16. The chart loads the full series; it does not clip to the last month. OHLC, volume, `rsi_14`, `macd`, `macd_signal`, and `macd_hist` are plotted as stored. The right-hand factor list shows `trend_tag`, `vol_tag`, `rs_5d`, `rs_20d`, returns, ATR, moving-average distance, `vol_ratio_20`, and `ds_source` for the latest bar, or the bar under the crosshair. `ret_20d` and `dist_sma50_pct` stay empty during the warm-up and then fill in; the sidebar prints an em dash until a value exists.
+QQQ loads the full history and opens on about the last two years. **近2年** and **全部** switch that window, and the chart can be panned further back. The shorter symbols show every bar. Empty factor cells stay an em dash through warm-up.
 
-The browser cannot open DuckDB, so `scripts/export_bars.py` snapshots the view into `src/data/bars.ts`. That file is what the page imports. If the store path is missing, the script also looks at `/workspace/trading.duckdb`.
+The browser cannot open DuckDB, so `scripts/export_bars.py` joins those tables into `src/data/bars.ts`. If the store path is locked or missing, the script also looks at `/workspace/trading.duckdb` and, when the file is locked, copies it before reading.
 
 ```bash
 python3 scripts/export_bars.py
 ```
 
-Needs Python `duckdb`. Weekly and intraday chips stay disabled: this view is daily only.
+Needs Python `duckdb`. Weekly and intraday chips stay disabled. `bars_1min` is not wired yet.
 
 ## Annotation schema
 

@@ -1,5 +1,5 @@
 import { formatDateLabel, formatPrice, formatRsi, formatVolume } from '../lib/format';
-import { TIMEFRAME_LABEL, type Annotation, type AskResult, type Bar, type MarketFrame, type SelectionContext } from '../types';
+import { RECENT_TRADING_DAYS, TIMEFRAME_LABEL, type Annotation, type AskResult, type Bar, type MacdPoint, type MarketFrame, type SelectionContext } from '../types';
 
 const COLOR = {
   band: '#5c6b73',
@@ -43,29 +43,32 @@ function findBreakout(bars: Bar[], after: number, ceiling: number): number {
   return peak;
 }
 
+function macdAt(frame: MarketFrame, index: number): MacdPoint | null {
+  return frame.macd[index] ?? null;
+}
+
 function findCross(frame: MarketFrame, from: number, to: number): number {
   let nearest = -1;
   let nearestDist = Infinity;
   const focus = Math.min(frame.bars.length - 1, to);
   for (let index = Math.max(1, from); index <= focus; index += 1) {
-    const prev = frame.macd[index - 1].hist;
-    const next = frame.macd[index].hist;
-    if (prev <= 0 && next > 0) {
-      const dist = Math.abs(index - focus);
-      if (dist < nearestDist) {
-        nearest = index;
-        nearestDist = dist;
-      }
+    const prev = macdAt(frame, index - 1);
+    const next = macdAt(frame, index);
+    if (!prev || !next || !(prev.hist <= 0 && next.hist > 0)) continue;
+    const dist = Math.abs(index - focus);
+    if (dist < nearestDist) {
+      nearest = index;
+      nearestDist = dist;
     }
   }
   if (nearest >= 0) return nearest;
-  let best = from;
+  let best = -1;
   let bestHist = -Infinity;
   for (let index = from; index <= focus; index += 1) {
-    if (frame.macd[index].hist > bestHist) {
-      bestHist = frame.macd[index].hist;
-      best = index;
-    }
+    const point = macdAt(frame, index);
+    if (!point || point.hist <= bestHist) continue;
+    bestHist = point.hist;
+    best = index;
   }
   return best;
 }
@@ -120,8 +123,21 @@ function contextFor(frame: MarketFrame, fromIso: string, toIso: string, focusCha
   };
 }
 
-export function buildDemo(frame: MarketFrame): AskResult {
+function focused(frame: MarketFrame): MarketFrame {
+  if (frame.bars.length <= RECENT_TRADING_DAYS + 40) return frame;
+  const start = frame.bars.length - RECENT_TRADING_DAYS;
+  return {
+    ...frame,
+    bars: frame.bars.slice(start),
+    macd: frame.macd.slice(start),
+    rsi: frame.rsi.slice(start),
+  };
+}
+
+export function buildDemo(source: MarketFrame): AskResult {
+  const frame = focused(source);
   const bars = frame.bars;
+  const windowNote = frame.bars.length < source.bars.length ? `近两年这 ${bars.length} 个交易日` : `这 ${bars.length} 个交易日`;
   const base = tightBase(bars);
   const baseBars = bars.slice(base.i0, base.i1 + 1);
   const baseHigh = Math.max(...baseBars.map((bar) => bar.high));
@@ -131,9 +147,11 @@ export function buildDemo(frame: MarketFrame): AskResult {
   const prior = bars.slice(Math.max(0, breakoutIndex - 20), breakoutIndex);
   const avgVol = prior.reduce((sum, bar) => sum + bar.volume, 0) / Math.max(1, prior.length);
   const volRatio = breakout.volume / avgVol;
-  const crossIndex = findCross(frame, base.i0, Math.min(bars.length - 1, breakoutIndex + 6));
+  const crossIndex = Math.max(0, findCross(frame, base.i0, Math.min(bars.length - 1, breakoutIndex + 6)));
   const cross = bars[crossIndex];
-  const crossed = frame.macd[crossIndex - 1] != null && frame.macd[crossIndex - 1].hist <= 0 && frame.macd[crossIndex].hist > 0;
+  const crossPoint = macdAt(frame, crossIndex);
+  const previousPoint = macdAt(frame, crossIndex - 1);
+  const crossed = previousPoint != null && crossPoint != null && previousPoint.hist <= 0 && crossPoint.hist > 0;
   const foundRsi = lowestRsi(frame, 0, bars.length - 1);
   const rsiIndex = foundRsi < 0 ? 0 : foundRsi;
   const rsiValue = frame.rsi[rsiIndex] ?? 50;
@@ -151,9 +169,9 @@ export function buildDemo(frame: MarketFrame): AskResult {
   const last = bars[bars.length - 1];
   const lastRsi = [...frame.rsi].reverse().find((value) => value != null) ?? 50;
   const histEnd = Math.min(bars.length - 1, crossIndex + 8);
-  const histSlice = frame.macd.slice(Math.max(0, crossIndex - 2), histEnd + 1);
-  const histLow = Math.min(...histSlice.map((point) => Math.min(point.hist, point.macd, point.signal)));
-  const histHigh = Math.max(...histSlice.map((point) => Math.max(point.hist, point.macd, point.signal)));
+  const histSlice = frame.macd.slice(Math.max(0, crossIndex - 2), histEnd + 1).filter((point): point is MacdPoint => point != null);
+  const histLow = histSlice.length === 0 ? 0 : Math.min(...histSlice.map((point) => Math.min(point.hist, point.macd, point.signal)));
+  const histHigh = histSlice.length === 0 ? 0 : Math.max(...histSlice.map((point) => Math.max(point.hist, point.macd, point.signal)));
   const ellipseLow = Math.max(8, rsiValue - 6);
   const ellipseHigh = Math.min(92, Math.max(ellipseLow + 8, (frame.rsi[rsiEnd] ?? rsiValue) + 6));
 
@@ -205,7 +223,7 @@ export function buildDemo(frame: MarketFrame): AskResult {
       type: 'marker',
       chart: 'macd',
       from: cross.iso,
-      price: frame.macd[crossIndex].macd,
+      price: crossPoint?.macd ?? 0,
       label: crossed ? '金叉' : '柱峰',
       style: { color: COLOR.rect },
       linkTo: ['mk', 'hist'],
@@ -303,7 +321,7 @@ export function buildDemo(frame: MarketFrame): AskResult {
     : `后段最高的收盘在 ${formatDateLabel(breakout.iso)}（${formatPrice(breakout.close)}），并没有干净地离开平台上沿。我仍把这一根标成 [[mk|突破]] 候选，成交量是前 ${prior.length} 日的 ${volRatio.toFixed(1)} 倍。`;
 
   const assistantText = [
-    `${frame.name}（${frame.symbol}）这 ${bars.length} 个交易日里，主线是一段平台，然后是 ${formatDateLabel(breakout.iso)} 前后的抬升。句子里的标记和图表是同一套编号。行情来自 DuckDB，这段话仍是本地写好的。`,
+    `${frame.name}（${frame.symbol}）${windowNote}里，主线是一段平台，然后是 ${formatDateLabel(breakout.iso)} 前后的抬升。句子里的标记和图表是同一套编号。这段话仍是本地写好的。`,
     '',
     `[[band|平台]]大约从 ${formatDateLabel(bars[base.i0].iso)} 到 ${formatDateLabel(bars[base.i1].iso)}，价格落在 ${formatPrice(baseLow)}–${formatPrice(baseHigh)}。${breakSentence}`,
     '',

@@ -42,14 +42,18 @@ export function FactorPanel({ bar, following }: FactorPanelProps) {
     { label: 'vol_tag', value: tag(factor.volTag, VOL) },
     { label: 'rs_5d', value: pct(factor.rs5d) },
     { label: 'rs_20d', value: pct(factor.rs20d) },
+    { label: 'dist_sma20_pct', value: pct(factor.distSma20Pct) },
+    { label: 'dist_sma50_pct', value: pct(factor.distSma50Pct) },
+    { label: 'dist_sma200_pct', value: pct(factor.distSma200Pct) },
+    { label: 'atr_pct_rank_20', value: factor.atrPctRank20 == null ? '—' : String(Math.round(factor.atrPctRank20)) },
+    { label: 'atr_pct_rank_60', value: factor.atrPctRank60 == null ? '—' : String(Math.round(factor.atrPctRank60)) },
+    { label: 'atr_pct_rank_252', value: factor.atrPctRank252 == null ? '—' : String(Math.round(factor.atrPctRank252)) },
     { label: 'ret_1d', value: pct(factor.ret1d) },
     { label: 'ret_5d', value: pct(factor.ret5d) },
     { label: 'ret_20d', value: pct(factor.ret20d) },
+    { label: 'ret_60d', value: pct(factor.ret60d) },
     { label: 'atr_pct', value: pct(factor.atrPct) },
-    { label: 'atr_pct_rank_20', value: factor.atrPctRank20 == null ? '—' : String(Math.round(factor.atrPctRank20)) },
     { label: 'vol_ratio_20', value: factor.volRatio20 == null ? '—' : `${plain(factor.volRatio20)}×` },
-    { label: 'dist_sma20_pct', value: pct(factor.distSma20Pct) },
-    { label: 'dist_sma50_pct', value: pct(factor.distSma50Pct) },
     { label: 'dist_ema9_pct', value: pct(factor.distEma9Pct) },
     { label: 'dist_ema21_pct', value: pct(factor.distEma21Pct) },
     { label: 'atr_14', value: factor.atr14 == null ? '—' : formatPrice(factor.atr14) },
@@ -70,7 +74,6 @@ export function FactorPanel({ bar, following }: FactorPanelProps) {
           </div>
         ))}
       </dl>
-      <p className={styles.source}>{factor.dsSource ?? 'v_ds_bars_indicators'}</p>
     </section>
   );
 }

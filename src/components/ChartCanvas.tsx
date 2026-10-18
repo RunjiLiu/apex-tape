@@ -15,8 +15,8 @@ import {
 } from 'lightweight-charts';
 import { formatOsc, formatPct, formatPrice, formatRsi, formatTick, formatVolume } from '../lib/format';
 import { barByTime } from '../lib/snap';
-import type { ChartHandles, MarketFrame, MenuState } from '../types';
-import { TIMEFRAME_LONG } from '../types';
+import type { ChartHandles, HistoryView, MarketFrame, MenuState } from '../types';
+import { RECENT_TRADING_DAYS, TIMEFRAME_LONG } from '../types';
 import styles from './ChartCanvas.module.css';
 
 const FONT = '"Segoe UI", "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", sans-serif';
@@ -25,6 +25,7 @@ const DOWN = '#9a4e46';
 
 interface ChartCanvasProps {
   frame: MarketFrame;
+  history: HistoryView;
   selecting: 'price' | 'macd' | 'rsi' | null;
   onReady: (handles: ChartHandles | null) => void;
   onContextMenu: (menu: MenuState) => void;
@@ -62,8 +63,8 @@ function mountChart(container: HTMLElement, margins: { top: number; bottom: numb
       borderColor: '#e6e1d8',
       rightOffset: 6,
       barSpacing: intraday ? 6 : 7,
-      minBarSpacing: 3,
-      tickMarkFormatter: (time: Time) => (typeof time === 'number' ? formatTick(time, intraday) : ''),
+      minBarSpacing: 0.1,
+      tickMarkFormatter: (time: Time) => (typeof time === 'number' ? formatTick(time, intraday, false) : ''),
     },
     localization: {
       locale: 'zh-CN',
@@ -95,7 +96,6 @@ function applyFrame(
   macdSignal: ISeriesApi<'Line'>,
   macdHist: ISeriesApi<'Histogram'>,
   rsiLine: ISeriesApi<'Line'>,
-  priceChart: IChartApi,
 ): void {
   candle.setData(frame.bars.map((bar) => ({
     time: bar.time,
@@ -109,25 +109,44 @@ function applyFrame(
     value: bar.volume,
     color: bar.close >= bar.open ? 'rgba(44, 107, 88, 0.38)' : 'rgba(154, 78, 70, 0.34)',
   })));
-  macdLine.setData(frame.bars.map((bar, index) => ({ time: bar.time, value: frame.macd[index].macd })));
-  macdSignal.setData(frame.bars.map((bar, index) => ({ time: bar.time, value: frame.macd[index].signal })));
+  macdLine.setData(frame.bars.map((bar, index) => {
+    const point = frame.macd[index];
+    return point == null ? { time: bar.time } : { time: bar.time, value: point.macd };
+  }));
+  macdSignal.setData(frame.bars.map((bar, index) => {
+    const point = frame.macd[index];
+    return point == null ? { time: bar.time } : { time: bar.time, value: point.signal };
+  }));
   macdHist.setData(frame.bars.map((bar, index) => {
-    const hist = frame.macd[index].hist;
+    const point = frame.macd[index];
+    if (point == null) return { time: bar.time };
     return {
       time: bar.time,
-      value: hist,
-      color: hist >= 0 ? 'rgba(47, 111, 102, 0.72)' : 'rgba(154, 78, 70, 0.68)',
+      value: point.hist,
+      color: point.hist >= 0 ? 'rgba(47, 111, 102, 0.72)' : 'rgba(154, 78, 70, 0.68)',
     };
   }));
   rsiLine.setData(frame.bars.map((bar, index) => {
     const value = frame.rsi[index];
     return value == null ? { time: bar.time } : { time: bar.time, value };
   }));
-  priceChart.timeScale().fitContent();
+}
+
+function applyRange(chart: IChartApi, count: number, history: HistoryView): void {
+  const showAll = history === 'all' || count <= RECENT_TRADING_DAYS + 8;
+  const long = count > RECENT_TRADING_DAYS + 8;
+  chart.timeScale().applyOptions({
+    minBarSpacing: showAll && long ? 0.05 : 1.2,
+    barSpacing: showAll && long ? 0.4 : 6,
+    rightOffset: 4,
+  });
+  if (showAll) chart.timeScale().fitContent();
+  else chart.timeScale().setVisibleLogicalRange({ from: count - RECENT_TRADING_DAYS, to: count + 2 });
 }
 
 export function ChartCanvas({
   frame,
+  history,
   selecting,
   onReady,
   onContextMenu,
@@ -142,6 +161,7 @@ export function ChartCanvas({
   const macdHostRef = useRef<HTMLDivElement>(null);
   const rsiHostRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef(frame);
+  const historyRef = useRef(history);
   const readyRef = useRef<ChartHandles | null>(null);
   const onReadyRef = useRef(onReady);
   const onMenuRef = useRef(onContextMenu);
@@ -151,6 +171,7 @@ export function ChartCanvas({
   const [hoverTime, setHoverTime] = useState<number | null>(null);
 
   frameRef.current = frame;
+  historyRef.current = history;
   onReadyRef.current = onReady;
   onMenuRef.current = onContextMenu;
   onAnnRef.current = onAnnotationClick;
@@ -338,7 +359,8 @@ export function ChartCanvas({
       listenMenu('rsi', rsiPane, rsiChart, rsiLine),
     ];
 
-    applyFrame(frameRef.current, candle, volume, macdLine, macdSignal, macdHist, rsiLine, priceChart);
+    applyFrame(frameRef.current, candle, volume, macdLine, macdSignal, macdHist, rsiLine);
+    applyRange(priceChart, frameRef.current.bars.length, historyRef.current);
     onReadyRef.current(handles);
 
     return () => {
@@ -354,23 +376,24 @@ export function ChartCanvas({
   useEffect(() => {
     const api = readyRef.current;
     if (!api) return;
-    applyFrame(frame, api.candle, api.volume, api.macdLine, api.macdSignal, api.macdHist, api.rsiLine, api.priceChart);
+    applyFrame(frame, api.candle, api.volume, api.macdLine, api.macdSignal, api.macdHist, api.rsiLine);
     const intraday = frame.timeframe === 'I';
+    const yearly = frame.bars.length > 400;
     const options = {
       timeScale: {
-        tickMarkFormatter: (time: Time) => (typeof time === 'number' ? formatTick(time, intraday) : ''),
-        barSpacing: intraday ? 6 : 7,
+        tickMarkFormatter: (time: Time) => (typeof time === 'number' ? formatTick(time, intraday, yearly) : ''),
       },
       localization: {
         locale: 'zh-CN',
-        timeFormatter: (time: Time) => (typeof time === 'number' ? formatTick(time, intraday) : ''),
+        timeFormatter: (time: Time) => (typeof time === 'number' ? formatTick(time, intraday, yearly) : ''),
       },
     };
     api.priceChart.applyOptions(options);
     api.macdChart.applyOptions(options);
     api.rsiChart.applyOptions(options);
+    applyRange(api.priceChart, frame.bars.length, history);
     setHoverTime(null);
-  }, [frame]);
+  }, [frame, history]);
 
   useEffect(() => {
     if (hoverTime == null) {

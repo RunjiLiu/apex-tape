@@ -5,9 +5,14 @@ import {
   TIMEFRAME_LONG,
   type Annotation,
   type AskResult,
+  type MacdPoint,
   type MarketFrame,
   type SelectionContext,
 } from '../types';
+
+function presentMacd(points: Array<MacdPoint | null | undefined>): MacdPoint[] {
+  return points.filter((point): point is MacdPoint => point != null);
+}
 
 const COLOR = {
   high: '#8a5a44',
@@ -68,8 +73,10 @@ function selectionRect(frame: MarketFrame, fromIso: string, toIso: string, chart
     price = Math.min(...slice.bars.map((bar) => bar.low));
     price2 = Math.max(...slice.bars.map((bar) => bar.high));
   } else if (chart === 'macd') {
-    price = Math.min(...slice.macd.flatMap((point) => [point.macd, point.signal, point.hist]));
-    price2 = Math.max(...slice.macd.flatMap((point) => [point.macd, point.signal, point.hist]));
+    const points = presentMacd(slice.macd);
+    if (points.length === 0) return null;
+    price = Math.min(...points.flatMap((point) => [point.macd, point.signal, point.hist]));
+    price2 = Math.max(...points.flatMap((point) => [point.macd, point.signal, point.hist]));
   } else {
     const values = slice.rsi.filter((value): value is number => value != null);
     if (values.length === 0) return null;
@@ -136,10 +143,22 @@ export function replyToSelection(
 
   if (purpose === 'indicator' && chart !== 'price') {
     if (chart === 'macd') {
-      const peak = slice.macd.reduce((best, point, index) => (Math.abs(point.hist) > Math.abs(best.point.hist) ? { point, index } : best), {
-        point: slice.macd[0],
-        index: 0,
-      });
+      const points = presentMacd(slice.macd);
+      if (points.length === 0) {
+        return {
+          userText: `框选 ${rangeLabel} 的 MACD。`,
+          context,
+          selection,
+          annotations: [],
+          assistantText: '这段还没有 MACD。往右框到已经算出指标的区间。',
+        };
+      }
+      const peak = slice.macd.reduce((best, point, index) => {
+        if (!point) return best;
+        if (!best.point || Math.abs(point.hist) > Math.abs(best.point.hist)) return { point, index };
+        return best;
+      }, { point: null as MacdPoint | null, index: 0 });
+      if (!peak.point) return miss(frame, '框选一段 MACD。');
       const markerId = aid('m');
       const rectId = aid('r');
       const annotations: Annotation[] = [
@@ -149,8 +168,8 @@ export function replyToSelection(
           chart: 'macd',
           from: first.iso,
           to: last.iso,
-          price: Math.min(...slice.macd.flatMap((point) => [point.macd, point.signal, point.hist])),
-          price2: Math.max(...slice.macd.flatMap((point) => [point.macd, point.signal, point.hist])),
+          price: Math.min(...points.flatMap((point) => [point.macd, point.signal, point.hist])),
+          price2: Math.max(...points.flatMap((point) => [point.macd, point.signal, point.hist])),
           label: '区间',
           style: { color: COLOR.macd, opacity: 0.14 },
           messageAnchor: rectId,
@@ -172,7 +191,7 @@ export function replyToSelection(
         context,
         selection,
         annotations,
-        assistantText: `${rangeLabel} 的 MACD 从 ${formatOsc(slice.macd[0].macd)} 到 ${formatOsc(slice.macd[slice.macd.length - 1].macd)}，最后一根柱体 ${formatOsc(slice.macd[slice.macd.length - 1].hist)}。柱体绝对值最大在 [[${markerId}|${formatDateLabel(slice.bars[peak.index].iso)}]]，读数 ${formatOsc(peak.point.hist)}。矩形 [[${rectId}|区间]] 覆盖你框住的整段。`,
+        assistantText: `${rangeLabel} 的 MACD 从 ${formatOsc(points[0].macd)} 到 ${formatOsc(points[points.length - 1].macd)}，最后一根柱体 ${formatOsc(points[points.length - 1].hist)}。柱体绝对值最大在 [[${markerId}|${formatDateLabel(slice.bars[peak.index].iso)}]]，读数 ${formatOsc(peak.point.hist)}。矩形 [[${rectId}|区间]] 覆盖你框住的整段。`,
       };
     }
     const values = slice.rsi.map((value, index) => ({ value, index })).filter((item): item is { value: number; index: number } => item.value != null);
@@ -290,7 +309,7 @@ export function replyToPoint(frame: MarketFrame, chart: 'price' | 'macd' | 'rsi'
       type: 'marker',
       chart,
       from: bar.iso,
-      price: chart === 'price' ? bar.close : chart === 'macd' ? macd.macd : (rsi ?? 50),
+      price: chart === 'price' ? bar.close : chart === 'macd' ? (macd?.macd ?? 0) : (rsi ?? 50),
       label: '此点',
       style: { color: chart === 'rsi' ? COLOR.rsi : chart === 'macd' ? COLOR.macd : COLOR.marker },
       messageAnchor: markerId,
@@ -312,12 +331,11 @@ export function replyToPoint(frame: MarketFrame, chart: 'price' | 'macd' | 'rsi'
   }
   const where = formatDateLabel(bar.iso);
   const delta = change == null ? '没有前一根可对照' : `较前一根 ${formatPct(change)}`;
-  const indicator =
-    chart === 'macd'
-      ? `MACD ${formatOsc(macd.macd)}，信号 ${formatOsc(macd.signal)}，柱 ${formatOsc(macd.hist)}。`
-      : chart === 'rsi'
-        ? `RSI ${rsi == null ? '还没有读数' : formatRsi(rsi)}。`
-        : `MACD 柱 ${formatOsc(macd.hist)}，RSI ${rsi == null ? '—' : formatRsi(rsi)}。`;
+  const indicator = chart === 'macd'
+    ? (macd ? `MACD ${formatOsc(macd.macd)}，信号 ${formatOsc(macd.signal)}，柱 ${formatOsc(macd.hist)}。` : '这一根还没有 MACD。')
+    : chart === 'rsi'
+      ? `RSI ${rsi == null ? '还没有读数' : formatRsi(rsi)}。`
+      : `MACD 柱 ${macd ? formatOsc(macd.hist) : '—'}，RSI ${rsi == null ? '—' : formatRsi(rsi)}。`;
   return {
     userText: `看一下 ${where} 这一根。`,
     context,
@@ -333,16 +351,39 @@ export function replyToExplain(frame: MarketFrame, chart: 'price' | 'macd' | 'rs
   if (!context) return miss(frame, '解释一下这个指标。');
 
   if (chart === 'macd') {
+    const known = presentMacd(frame.macd);
+    if (known.length === 0) {
+      return {
+        userText: '解释一下 MACD。',
+        context,
+        selection: null,
+        annotations: [],
+        assistantText: '这张图上还没有 MACD。指标只覆盖已经算出来的近期日线。',
+      };
+    }
     let cross = -1;
     for (let index = frame.macd.length - 1; index >= 1; index -= 1) {
-      if (frame.macd[index - 1].hist <= 0 && frame.macd[index].hist > 0) {
+      const prev = frame.macd[index - 1];
+      const next = frame.macd[index];
+      if (prev && next && prev.hist <= 0 && next.hist > 0) {
         cross = index;
         break;
       }
     }
-    const peakIndex = cross >= 0 ? cross : frame.macd.reduce((best, point, index) => (point.hist > frame.macd[best].hist ? index : best), 0);
+    let peakIndex = cross;
+    if (peakIndex < 0) {
+      let bestHist = -Infinity;
+      frame.macd.forEach((point, index) => {
+        if (point && point.hist > bestHist) {
+          bestHist = point.hist;
+          peakIndex = index;
+        }
+      });
+    }
+    const peak = frame.macd[peakIndex];
+    if (!peak) return miss(frame, '解释一下 MACD。');
     const end = Math.min(frame.bars.length - 1, peakIndex + 10);
-    const window = frame.macd.slice(Math.max(0, peakIndex - 1), end + 1);
+    const window = presentMacd(frame.macd.slice(Math.max(0, peakIndex - 1), end + 1));
     const markerId = aid('c');
     const rectId = aid('box');
     const annotations: Annotation[] = [
@@ -351,7 +392,7 @@ export function replyToExplain(frame: MarketFrame, chart: 'price' | 'macd' | 'rs
         type: 'marker',
         chart: 'macd',
         from: frame.bars[peakIndex].iso,
-        price: frame.macd[peakIndex].macd,
+        price: peak.macd,
         label: cross >= 0 ? '金叉' : '柱峰',
         style: { color: COLOR.macd },
         messageAnchor: markerId,
@@ -370,7 +411,7 @@ export function replyToExplain(frame: MarketFrame, chart: 'price' | 'macd' | 'rs
         messageAnchor: rectId,
       },
     ];
-    const latest = frame.macd[frame.macd.length - 1];
+    const latest = [...frame.macd].reverse().find((point) => point != null) ?? peak;
     return {
       userText: '解释一下 MACD。',
       context,

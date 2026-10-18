@@ -34,23 +34,31 @@ export interface Annotation {
   messageAnchor?: string;
 }
 
+export type HistoryView = 'recent' | 'all';
+
+/** About two years of sessions. A longer symbol opens on this window. */
+export const RECENT_TRADING_DAYS = 504;
+
 export interface FactorSnapshot {
   ret1d: number | null;
   ret5d: number | null;
   ret20d: number | null;
+  ret60d: number | null;
   rs5d: number | null;
   rs20d: number | null;
   atr14: number | null;
   atrPct: number | null;
   atrPctRank20: number | null;
+  atrPctRank60: number | null;
+  atrPctRank252: number | null;
   distSma20Pct: number | null;
   distSma50Pct: number | null;
+  distSma200Pct: number | null;
   distEma9Pct: number | null;
   distEma21Pct: number | null;
   volRatio20: number | null;
   trendTag: string | null;
   volTag: string | null;
-  dsSource: string | null;
 }
 
 export interface Bar {
@@ -75,7 +83,7 @@ export interface MarketFrame {
   name: string;
   timeframe: Timeframe;
   bars: Bar[];
-  macd: MacdPoint[];
+  macd: Array<MacdPoint | null>;
   rsi: Array<number | null>;
 }
 
