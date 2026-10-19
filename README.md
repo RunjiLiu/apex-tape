@@ -9,7 +9,7 @@ npm install
 npm run dev
 ```
 
-The dev server listens on [http://127.0.0.1:4327](http://127.0.0.1:4327).
+The dev server listens on [http://127.0.0.1:4327](http://127.0.0.1:4327) at `/`. A production build uses base `/apex-tape/` unless `VITE_BASE` is set. The published site is [https://runjiliu.github.io/apex-tape/](https://runjiliu.github.io/apex-tape/). Pushing `main` runs `.github/workflows/deploy.yml`, which builds the static `dist/` bundle and deploys it with GitHub Pages. Chart data is the snapshot in `src/data/bars.ts`; the page does not call a backend. The chat replies are local templates.
 
 ```bash
 npm run build
