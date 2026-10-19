@@ -9,7 +9,7 @@
   position: absolute;
   pointer-events: auto;
   border: 1px solid var(--line);
-  background: rgba(251, 250, 247, 0.94);
+  background: color-mix(in srgb, var(--panel) 94%, transparent);
   color: var(--ink);
   border-radius: 999px;
   padding: 1px 7px 2px;
@@ -26,5 +26,5 @@
 .active {
   background: var(--accent);
   border-color: var(--accent);
-  color: #f7f4ee;
+  color: var(--on-accent);
 }

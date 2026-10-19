@@ -35,6 +35,16 @@ export function ContextMenu({ menu, canClear, onChoose, onClose }: ContextMenuPr
     };
   }, [onClose]);
 
+  useEffect(() => {
+    const node = ref.current;
+    if (!node || !menu.touch) return;
+    node.style.pointerEvents = 'none';
+    const timer = window.setTimeout(() => {
+      node.style.pointerEvents = '';
+    }, 320);
+    return () => window.clearTimeout(timer);
+  }, [menu.touch]);
+
   const disabled = (action: MenuAction): boolean => {
     if (action === 'clear') return !canClear;
     if (action === 'select-trend') return menu.chart !== 'price';
@@ -42,8 +52,8 @@ export function ContextMenu({ menu, canClear, onChoose, onClose }: ContextMenuPr
     return false;
   };
 
-  const left = Math.min(menu.x, window.innerWidth - 196);
-  const top = Math.min(menu.y, window.innerHeight - 220);
+  const left = Math.max(8, Math.min(menu.x, window.innerWidth - 220));
+  const top = Math.max(8, Math.min(menu.y, window.innerHeight - 300));
 
   return (
     <div ref={ref} className={styles.menu} style={{ left, top }} role="menu">

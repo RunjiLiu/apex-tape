@@ -1,5 +1,6 @@
 import { formatDateLabel, formatOsc, formatPct, formatPrice, formatRsi, formatVolume } from '../lib/format';
 import { sliceRange } from '../lib/snap';
+import { MARK } from '../chart/palette';
 import {
   TIMEFRAME_LABEL,
   TIMEFRAME_LONG,
@@ -15,13 +16,13 @@ function presentMacd(points: Array<MacdPoint | null | undefined>): MacdPoint[] {
 }
 
 const COLOR = {
-  high: '#8a5a44',
-  low: '#3d5a80',
-  marker: '#2f5d50',
-  macd: '#3f6f66',
-  rsi: '#6a5a78',
-  band: '#5c6b73',
-  selection: '#5e6a64',
+  high: MARK.high,
+  low: MARK.low,
+  marker: MARK.marker,
+  macd: MARK.macd,
+  rsi: MARK.rsi,
+  band: MARK.band,
+  selection: MARK.selection,
 };
 
 let sequence = 1;

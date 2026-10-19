@@ -15,8 +15,8 @@
   bottom: 16px;
   width: min(380px, calc(100vw - 24px));
   z-index: 30;
-  background: #fffcf8;
-  border: 1px solid #e4dfd6;
+  background: var(--panel);
+  border: 1px solid var(--line);
   border-radius: 12px;
   box-shadow: 0 12px 40px rgba(40, 36, 28, 0.12);
 }
@@ -59,7 +59,7 @@
   color: var(--muted);
 }
 
-.pinOn { color: var(--accent); border-color: #d5e0db; background: #eef2f0; }
+.pinOn { color: var(--accent); border-color: var(--tint-line); background: var(--tint); }
 
 .strip {
   display: flex;
@@ -120,8 +120,8 @@
   margin: 0 1px;
   padding: 0 4px;
   border-radius: 4px;
-  border: 1px solid #ddd6cb;
-  background: #f6f3ed;
+  border: 1px solid var(--line);
+  background: var(--chip);
   font: inherit;
   cursor: pointer;
   transition: background 180ms ease, color 180ms ease;
@@ -130,7 +130,7 @@
 .anchorOn {
   background: var(--accent);
   border-color: var(--accent);
-  color: #f6f3ed;
+  color: var(--on-accent);
 }
 
 .pending { margin: 0; color: var(--muted); font-size: 12px; }
@@ -155,10 +155,34 @@
 .send {
   border: none;
   background: var(--accent);
-  color: #f7f4ee;
+  color: var(--on-accent);
   border-radius: 8px;
   padding: 6px 10px;
   font-size: 13px;
 }
 
 .send:disabled { opacity: 0.55; }
+
+.sheetLayout,
+.sheetLayout.pinned,
+.sheetLayout.pinned.open,
+.sheetLayout.floating,
+.sheetLayout.floating.open {
+  position: relative;
+  right: auto;
+  bottom: auto;
+  width: auto;
+  height: auto;
+  min-height: 0;
+  flex: 1;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+@media (max-width: 840px), ((max-height: 520px) and (orientation: landscape)) {
+  .pin, .pinOn, .barTitle, .send, .demo { min-height: 40px; }
+  .pin, .pinOn { padding: 8px 12px; }
+  .input { min-height: 40px; font-size: 16px; }
+  .send { padding: 8px 14px; }
+}

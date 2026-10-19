@@ -1,3 +1,4 @@
+import { MARK } from '../chart/palette';
 import { annotationFits } from '../lib/snap';
 import type { Annotation, MarketFrame } from '../types';
 import styles from './AnnotationLegend.module.css';
@@ -34,6 +35,7 @@ interface AnnotationLegendProps {
   onToggleChart: (chart: string) => void;
   onActivate: (id: string) => void;
   onDemo: () => void;
+  gesture?: 'context' | 'longpress';
 }
 
 export function AnnotationLegend({
@@ -47,6 +49,7 @@ export function AnnotationLegend({
   onToggleChart,
   onActivate,
   onDemo,
+  gesture = 'context',
 }: AnnotationLegendProps) {
   const visible = annotations.filter((annotation) => annotation.id !== 'selection');
   const groups = new Map<string, Annotation[]>();
@@ -69,7 +72,11 @@ export function AnnotationLegend({
       {visible.length === 0 ? (
         <div className={styles.empty}>
           <p>还没有写到图上的解读。</p>
-          <p>在蜡烛或指标上右键，可以框选一段时间，或针对某一根来问。也可以直接播放一段演示对话。</p>
+          <p>
+            {gesture === 'longpress'
+              ? '在蜡烛或指标上长按，可以框选一段时间，或针对某一根来问。也可以直接播放一段演示对话。'
+              : '在蜡烛或指标上右键，可以框选一段时间，或针对某一根来问。也可以直接播放一段演示对话。'}
+          </p>
           <button type="button" onClick={onDemo}>演示对话标注</button>
         </div>
       ) : (
@@ -101,7 +108,7 @@ export function AnnotationLegend({
                             className={`${styles.row} ${active ? styles.rowOn : ''} ${hidden || !placed ? styles.dim : ''}`}
                             onClick={() => onActivate(annotation.id)}
                           >
-                            <i style={{ background: annotation.style?.color ?? '#5c6b73' }} />
+                            <i style={{ background: annotation.style?.color ?? MARK.band }} />
                             <span>{annotation.label || TYPE_NAME[annotation.type] || annotation.type}</span>
                             {!placed && <em>视野外</em>}
                           </button>

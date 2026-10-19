@@ -66,7 +66,7 @@ class AnnotationRenderer implements IPrimitivePaneRenderer {
           context.fillStyle = withAlpha(shape.color, shape.dimmed ? 0.45 : 0.95);
           context.fill();
           context.lineWidth = 1.5;
-          context.strokeStyle = 'rgba(251, 250, 247, 0.95)';
+          context.strokeStyle = 'rgba(251, 251, 252, 0.95)';
           context.setLineDash([]);
           context.stroke();
           if (shape.highlighted) {

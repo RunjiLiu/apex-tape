@@ -1,6 +1,7 @@
 import type { IChartApi, ISeriesApi, Logical, SeriesType, UTCTimestamp } from 'lightweight-charts';
 import type { Annotation, ChartHandles, MarketFrame } from '../types';
 import { snapBar } from '../lib/snap';
+import { MARK } from './palette';
 
 export type ShapeKind = 'rect' | 'ellipse' | 'segment' | 'vline' | 'polyline' | 'marker';
 
@@ -33,15 +34,15 @@ export interface LabelModel {
 }
 
 const DEFAULT_COLOR: Record<string, string> = {
-  band: '#5c6b73',
-  marker: '#2f5d50',
-  hline: '#8a5a44',
-  trendline: '#3d5a80',
-  vline: '#6d665c',
-  rect: '#3f6f66',
-  ellipse: '#6a5a78',
-  label: '#3d4a45',
-  link: '#8a8175',
+  band: MARK.band,
+  marker: MARK.marker,
+  hline: MARK.hline,
+  trendline: MARK.trend,
+  vline: MARK.vline,
+  rect: MARK.rect,
+  ellipse: MARK.ellipse,
+  label: MARK.label,
+  link: MARK.link,
 };
 
 export function xOf(chart: IChartApi, time: UTCTimestamp): number | null {
@@ -59,7 +60,7 @@ function yOf(series: ISeriesApi<SeriesType>, price: number): number | null {
 }
 
 function colorOf(annotation: Annotation): string {
-  return annotation.style?.color ?? DEFAULT_COLOR[annotation.type] ?? '#5c6b73';
+  return annotation.style?.color ?? DEFAULT_COLOR[annotation.type] ?? MARK.band;
 }
 
 function paneOf(chart: string): 'price' | 'macd' | 'rsi' | null {

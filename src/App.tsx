@@ -9,9 +9,12 @@ import { ContextMenu } from './components/ContextMenu';
 import { FactorPanel } from './components/FactorPanel';
 import { SelectionBridge } from './components/SelectionBridge';
 import { TopBar } from './components/TopBar';
+import { useCompact } from './lib/compact';
 import { useThread } from './state/useThread';
 import { RECENT_TRADING_DAYS, UNIVERSE, type ChartHandles, type HistoryView, type MenuAction, type MenuState, type SelectMode } from './types';
 import styles from './App.module.css';
+
+type SheetTab = 'factor' | 'notes' | 'chat';
 
 const HINT: Record<SelectMode['chart'], string> = {
   price: '价格',
@@ -26,7 +29,20 @@ export default function App() {
   const [handles, setHandles] = useState<ChartHandles | null>(null);
   const [menu, setMenu] = useState<MenuState | null>(null);
   const [selectMode, setSelectMode] = useState<SelectMode | null>(null);
+  const [sheet, setSheet] = useState<SheetTab | null>(null);
+  const compact = useCompact();
   const thread = useThread();
+  const replyToken = compact && thread.open ? thread.messages.length : -1;
+  const [seenReply, setSeenReply] = useState(replyToken);
+  const [seenCompact, setSeenCompact] = useState(compact);
+  if (replyToken !== seenReply) {
+    setSeenReply(replyToken);
+    if (replyToken >= 0) setSheet('chat');
+  }
+  if (compact !== seenCompact) {
+    setSeenCompact(compact);
+    if (!compact) setSheet(null);
+  }
   const frame = frameFor(symbol);
   const longHistory = frame.bars.length > RECENT_TRADING_DAYS + 8;
   const last = frame.bars[frame.bars.length - 1];
@@ -39,6 +55,7 @@ export default function App() {
       if (event.key !== 'Escape') return;
       setMenu(null);
       setSelectMode(null);
+      setSheet(null);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -79,8 +96,13 @@ export default function App() {
     void thread.playDemo(frame);
   };
 
+  const openSheet = (tab: SheetTab) => {
+    setSheet((current) => (current === tab ? null : tab));
+    if (tab === 'chat') thread.setOpen(sheet !== 'chat');
+  };
+
   return (
-    <div className={styles.app}>
+    <div className={`${styles.app} ${compact ? styles.compact : ''}`}>
       <TopBar
         symbol={frame.symbol}
         name={frame.name}
@@ -92,6 +114,7 @@ export default function App() {
         history={longHistory ? history : null}
         interpret={thread.interpret}
         playing={thread.busy}
+        compact={compact}
         onHistory={setHistory}
         onSymbol={(next) => {
           setSymbol(next);
@@ -116,6 +139,7 @@ export default function App() {
             frame={frame}
             history={longHistory ? history : 'all'}
             selecting={selectMode?.chart ?? null}
+            compact={compact}
             onReady={setHandles}
             onContextMenu={(next) => {
               setSelectMode(null);
@@ -144,35 +168,59 @@ export default function App() {
             onCancel={() => setSelectMode(null)}
           />
         </div>
-        <div className={styles.side}>
-          <FactorPanel bar={focus} following={hoverIso != null && focus.iso === hoverIso} />
-          <AnnotationLegend
-            frame={frame}
-            annotations={thread.annotations}
-            interpret={thread.interpret}
-            hiddenIds={thread.hiddenIds}
-            hiddenCharts={thread.hiddenCharts}
-            highlight={thread.highlight}
-            onToggleId={thread.toggleId}
-            onToggleChart={thread.toggleChart}
-            onActivate={thread.activate}
-            onDemo={playDemo}
-          />
-          <ChatPanel
-            messages={thread.messages}
-            pending={thread.pending}
-            context={thread.context}
-            highlight={thread.highlight}
-            open={thread.open}
-            pinned={thread.pinned}
-            onToggleOpen={() => thread.setOpen(!thread.open)}
-            onTogglePin={() => thread.setPinned(!thread.pinned)}
-            onActivate={thread.activate}
-            onAsk={(question) => {
-              void thread.push(replyToText(frame, question, thread.context), 'append');
-            }}
-            onDemo={playDemo}
-          />
+        <div
+          className={`${styles.side} ${compact ? styles.sheet : ''} ${compact && sheet ? styles.sheetOpen : ''}`}
+          data-sheet={compact ? (sheet ?? 'closed') : 'all'}
+        >
+          <div className={styles.sheetBody}>
+            <div className={styles.factorWrap}>
+              <FactorPanel bar={focus} following={hoverIso != null && focus.iso === hoverIso} />
+            </div>
+            <div className={styles.notesWrap}>
+              <AnnotationLegend
+                frame={frame}
+                annotations={thread.annotations}
+                interpret={thread.interpret}
+                hiddenIds={thread.hiddenIds}
+                hiddenCharts={thread.hiddenCharts}
+                highlight={thread.highlight}
+                gesture={compact ? 'longpress' : 'context'}
+                onToggleId={thread.toggleId}
+                onToggleChart={thread.toggleChart}
+                onActivate={thread.activate}
+                onDemo={playDemo}
+              />
+            </div>
+            <div className={styles.chatWrap}>
+              <ChatPanel
+                messages={thread.messages}
+                pending={thread.pending}
+                context={thread.context}
+                highlight={thread.highlight}
+                open={compact ? sheet === 'chat' : thread.open}
+                pinned={thread.pinned}
+                layout={compact ? 'sheet' : 'dock'}
+                gesture={compact ? 'longpress' : 'context'}
+                onToggleOpen={() => {
+                  if (compact) openSheet('chat');
+                  else thread.setOpen(!thread.open);
+                }}
+                onTogglePin={() => thread.setPinned(!thread.pinned)}
+                onActivate={thread.activate}
+                onAsk={(question) => {
+                  void thread.push(replyToText(frame, question, thread.context), 'append');
+                }}
+                onDemo={playDemo}
+              />
+            </div>
+          </div>
+          {compact && (
+            <div className={styles.sheetBar} role="tablist" aria-label="侧栏">
+              <button type="button" role="tab" aria-selected={sheet === 'factor'} className={sheet === 'factor' ? styles.sheetTabOn : styles.sheetTab} onClick={() => openSheet('factor')}>因子</button>
+              <button type="button" role="tab" aria-selected={sheet === 'notes'} className={sheet === 'notes' ? styles.sheetTabOn : styles.sheetTab} onClick={() => openSheet('notes')}>标注</button>
+              <button type="button" role="tab" aria-selected={sheet === 'chat'} className={sheet === 'chat' ? styles.sheetTabOn : styles.sheetTab} onClick={() => openSheet('chat')}>解读</button>
+            </div>
+          )}
         </div>
       </div>
       {menu && (

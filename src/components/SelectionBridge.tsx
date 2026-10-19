@@ -86,7 +86,20 @@ export function SelectionBridge({ handles, frame, mode, onComplete, onCancel }: 
     pane.addEventListener('pointerup', finish, true);
     pane.addEventListener('pointercancel', finish, true);
     return () => {
-      chart.applyOptions({ handleScroll: true, handleScale: true });
+      chart.applyOptions({
+        handleScroll: {
+          mouseWheel: true,
+          pressedMouseMove: true,
+          horzTouchDrag: true,
+          vertTouchDrag: false,
+        },
+        handleScale: {
+          mouseWheel: true,
+          pinch: true,
+          axisPressedMouseMove: { time: true, price: true },
+          axisDoubleClickReset: { time: true, price: true },
+        },
+      });
       pane.removeEventListener('pointerdown', onDown, true);
       pane.removeEventListener('pointermove', onMove, true);
       pane.removeEventListener('pointerup', finish, true);

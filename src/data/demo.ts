@@ -1,17 +1,18 @@
 import { formatDateLabel, formatPrice, formatRsi, formatVolume } from '../lib/format';
+import { MARK } from '../chart/palette';
 import { RECENT_TRADING_DAYS, TIMEFRAME_LABEL, type Annotation, type AskResult, type Bar, type MacdPoint, type MarketFrame, type SelectionContext } from '../types';
 
 const COLOR = {
-  band: '#5c6b73',
-  marker: '#2f5d50',
-  hline: '#8a5a44',
-  trend: '#3d5a80',
-  vline: '#6d665c',
-  rect: '#3f6f66',
-  ellipse: '#6a5a78',
-  label: '#3d4a45',
-  link: '#8a8175',
-  volume: '#3f5c57',
+  band: MARK.band,
+  marker: MARK.marker,
+  hline: MARK.hline,
+  trend: MARK.trend,
+  vline: MARK.vline,
+  rect: MARK.rect,
+  ellipse: MARK.ellipse,
+  label: MARK.label,
+  link: MARK.link,
+  volume: MARK.volume,
 };
 
 function tightBase(bars: Bar[]): { i0: number; i1: number } {

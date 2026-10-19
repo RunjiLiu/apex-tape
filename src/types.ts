@@ -117,6 +117,7 @@ export interface MenuState {
   chart: 'price' | 'macd' | 'rsi';
   iso: string | null;
   price: number | null;
+  touch?: boolean;
 }
 
 export type MenuAction =

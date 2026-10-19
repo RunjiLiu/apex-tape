@@ -15,6 +15,8 @@ interface ChatPanelProps {
   onActivate: (id: string) => void;
   onAsk: (question: string) => void;
   onDemo: () => void;
+  layout?: 'dock' | 'sheet';
+  gesture?: 'context' | 'longpress';
 }
 
 const TOKEN = /\[\[([^\]|]+)\|([^\]]+)\]\]/g;
@@ -70,6 +72,8 @@ export function ChatPanel({
   onActivate,
   onAsk,
   onDemo,
+  layout = 'dock',
+  gesture = 'context',
 }: ChatPanelProps) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -95,16 +99,21 @@ export function ChatPanel({
   };
 
   return (
-    <section className={`${styles.panel} ${open ? styles.open : ''} ${pinned ? styles.pinned : styles.floating}`} aria-label="解读对话">
+    <section
+      className={`${styles.panel} ${open ? styles.open : ''} ${pinned ? styles.pinned : styles.floating} ${layout === 'sheet' ? styles.sheetLayout : ''}`}
+      aria-label="解读对话"
+    >
       <header className={styles.bar}>
         <button type="button" className={styles.barTitle} onClick={onToggleOpen}>
           解读
           {messages.length > 0 && <span className={styles.count}>{messages.length}</span>}
         </button>
         <div className={styles.barActions}>
-          <button type="button" className={pinned ? styles.pinOn : styles.pin} aria-pressed={pinned} onClick={onTogglePin}>
-            {pinned ? '已固定' : '固定'}
-          </button>
+          {layout !== 'sheet' && (
+            <button type="button" className={pinned ? styles.pinOn : styles.pin} aria-pressed={pinned} onClick={onTogglePin}>
+              {pinned ? '已固定' : '固定'}
+            </button>
+          )}
           <button type="button" className={styles.pin} onClick={onToggleOpen} aria-expanded={open}>
             {open ? '收起' : '展开'}
           </button>
@@ -128,7 +137,7 @@ export function ChatPanel({
           <div className={styles.scroll} ref={scrollerRef}>
             {messages.length === 0 && !pending && (
               <div className={styles.empty}>
-                <p>右键价格或指标，把一段走势交给这里。</p>
+                <p>{gesture === 'longpress' ? '长按价格或指标，把一段走势交给这里。' : '右键价格或指标，把一段走势交给这里。'}</p>
                 <p>回答是本地写好的，会带上能画回图上的标注。</p>
                 <button type="button" className={styles.demo} onClick={onDemo}>演示对话标注</button>
               </div>

@@ -3,8 +3,8 @@
   z-index: 40;
   min-width: 188px;
   padding: 4px;
-  background: #fffcf8;
-  border: 1px solid #e4dfd6;
+  background: var(--panel);
+  border: 1px solid var(--line);
   border-radius: 8px;
   box-shadow: 0 8px 24px rgba(40, 36, 28, 0.08);
   animation: fade 180ms ease;
@@ -28,13 +28,17 @@
   font-size: 13px;
 }
 
-.item:hover:not(:disabled) { background: #f1eee7; }
+.item:hover:not(:disabled) { background: var(--chip); }
 .item:disabled { color: #b0aaa0; cursor: default; }
 
 .hint { font-size: 11px; color: var(--muted); }
 
+@media (max-width: 840px), ((max-height: 520px) and (orientation: landscape)) {
+  .item { min-height: 44px; padding: 8px 12px; }
+}
+
 .sep {
   height: 1px;
-  background: #eeeae3;
+  background: var(--line);
   margin: 4px 6px;
 }

@@ -83,7 +83,7 @@
   font-size: 13px;
 }
 
-.row:hover { background: #f3f0ea; }
+.row:hover { background: var(--chip); }
 
 .row i {
   width: 8px;
@@ -99,7 +99,7 @@
   color: var(--muted);
 }
 
-.rowOn { background: #eef2f0; }
+.rowOn { background: var(--tint); }
 .dim { opacity: 0.55; }
 
 .credit {
@@ -109,3 +109,9 @@
 }
 
 .credit a { color: inherit; }
+
+@media (max-width: 840px), ((max-height: 520px) and (orientation: landscape)) {
+  .eye, .empty button, .row { min-height: 40px; }
+  .eye { min-width: 44px; padding: 8px 10px; }
+  .empty button { padding: 8px 14px; }
+}

@@ -13,20 +13,36 @@ import {
   type Time,
   type UTCTimestamp,
 } from 'lightweight-charts';
-import { formatOsc, formatPct, formatPrice, formatRsi, formatTick, formatVolume } from '../lib/format';
+import { formatOsc, formatPct, formatPrice, formatRsi, formatTick, formatVolume, withAlpha } from '../lib/format';
 import { barByTime } from '../lib/snap';
 import type { ChartHandles, HistoryView, MarketFrame, MenuState } from '../types';
 import { RECENT_TRADING_DAYS, TIMEFRAME_LONG } from '../types';
 import styles from './ChartCanvas.module.css';
 
 const FONT = '"Segoe UI", "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", sans-serif';
-const UP = '#2c6b58';
-const DOWN = '#9a4e46';
+const SIGNAL = '#a68462';
+const RSI = '#6a5a78';
+
+function readPalette() {
+  const style = getComputedStyle(document.documentElement);
+  const pick = (name: string, fallback: string) => style.getPropertyValue(name).trim() || fallback;
+  return {
+    upMark: pick('--up-mark', '#1aaa6e'),
+    down: pick('--down', '#9a4e46'),
+    accent: pick('--accent', '#3d5a80'),
+    panel: pick('--panel', '#fbfbfc'),
+    muted: pick('--muted', '#5e646e'),
+    line: pick('--line', '#e4e6eb'),
+    grid: pick('--grid', '#eef0f3'),
+    graphite: pick('--graphite', '#2a2e33'),
+  };
+}
 
 interface ChartCanvasProps {
   frame: MarketFrame;
   history: HistoryView;
   selecting: 'price' | 'macd' | 'rsi' | null;
+  compact: boolean;
   onReady: (handles: ChartHandles | null) => void;
   onContextMenu: (menu: MenuState) => void;
   onAnnotationClick: (id: string) => void;
@@ -35,32 +51,33 @@ interface ChartCanvasProps {
 }
 
 function mountChart(container: HTMLElement, margins: { top: number; bottom: number }, intraday: boolean): IChartApi {
+  const color = readPalette();
   return createChart(container, {
     autoSize: true,
     layout: {
-      background: { type: ColorType.Solid, color: '#fbfaf7' },
-      textColor: '#6a706b',
+      background: { type: ColorType.Solid, color: color.panel },
+      textColor: color.muted,
       fontFamily: FONT,
       fontSize: 11,
       attributionLogo: false,
       panes: {
         enableResize: false,
-        separatorColor: '#e6e1d8',
-        separatorHoverColor: 'rgba(47, 79, 74, 0.16)',
+        separatorColor: color.line,
+        separatorHoverColor: withAlpha(color.accent, 0.16),
       },
     },
     grid: {
-      vertLines: { color: '#efeae2' },
-      horzLines: { color: '#efeae2' },
+      vertLines: { color: color.grid },
+      horzLines: { color: color.grid },
     },
     rightPriceScale: {
-      borderColor: '#e6e1d8',
+      borderColor: color.line,
       minimumWidth: 76,
       scaleMargins: margins,
     },
     leftPriceScale: { visible: false },
     timeScale: {
-      borderColor: '#e6e1d8',
+      borderColor: color.line,
       rightOffset: 6,
       barSpacing: intraday ? 6 : 7,
       minBarSpacing: 0.1,
@@ -73,17 +90,29 @@ function mountChart(container: HTMLElement, margins: { top: number; bottom: numb
     crosshair: {
       mode: CrosshairMode.Normal,
       vertLine: {
-        color: 'rgba(90, 86, 78, 0.35)',
+        color: 'rgba(70, 74, 82, 0.35)',
         width: 1,
         style: LineStyle.Dashed,
-        labelBackgroundColor: '#2f4f4a',
+        labelBackgroundColor: color.graphite,
       },
       horzLine: {
-        color: 'rgba(90, 86, 78, 0.35)',
+        color: 'rgba(70, 74, 82, 0.35)',
         width: 1,
         style: LineStyle.Dashed,
-        labelBackgroundColor: '#2f4f4a',
+        labelBackgroundColor: color.graphite,
       },
+    },
+    handleScroll: {
+      mouseWheel: true,
+      pressedMouseMove: true,
+      horzTouchDrag: true,
+      vertTouchDrag: false,
+    },
+    handleScale: {
+      mouseWheel: true,
+      pinch: true,
+      axisPressedMouseMove: { time: true, price: true },
+      axisDoubleClickReset: { time: true, price: true },
     },
   });
 }
@@ -97,6 +126,7 @@ function applyFrame(
   macdHist: ISeriesApi<'Histogram'>,
   rsiLine: ISeriesApi<'Line'>,
 ): void {
+  const color = readPalette();
   candle.setData(frame.bars.map((bar) => ({
     time: bar.time,
     open: bar.open,
@@ -107,7 +137,7 @@ function applyFrame(
   volume.setData(frame.bars.map((bar) => ({
     time: bar.time,
     value: bar.volume,
-    color: bar.close >= bar.open ? 'rgba(44, 107, 88, 0.38)' : 'rgba(154, 78, 70, 0.34)',
+    color: bar.close >= bar.open ? withAlpha(color.upMark, 0.45) : withAlpha(color.down, 0.38),
   })));
   macdLine.setData(frame.bars.map((bar, index) => {
     const point = frame.macd[index];
@@ -123,7 +153,7 @@ function applyFrame(
     return {
       time: bar.time,
       value: point.hist,
-      color: point.hist >= 0 ? 'rgba(47, 111, 102, 0.72)' : 'rgba(154, 78, 70, 0.68)',
+      color: point.hist >= 0 ? withAlpha(color.upMark, 0.78) : withAlpha(color.down, 0.72),
     };
   }));
   rsiLine.setData(frame.bars.map((bar, index) => {
@@ -148,6 +178,7 @@ export function ChartCanvas({
   frame,
   history,
   selecting,
+  compact,
   onReady,
   onContextMenu,
   onAnnotationClick,
@@ -168,6 +199,7 @@ export function ChartCanvas({
   const onAnnRef = useRef(onAnnotationClick);
   const onBgRef = useRef(onBackgroundClick);
   const onHoverRef = useRef(onHover);
+  const selectingRef = useRef(selecting);
   const [hoverTime, setHoverTime] = useState<number | null>(null);
 
   frameRef.current = frame;
@@ -177,6 +209,7 @@ export function ChartCanvas({
   onAnnRef.current = onAnnotationClick;
   onBgRef.current = onBackgroundClick;
   onHoverRef.current = onHover;
+  selectingRef.current = selecting;
 
   useEffect(() => {
     const priceHost = priceHostRef.current;
@@ -192,13 +225,14 @@ export function ChartCanvas({
     const macdChart = mountChart(macdHost, { top: 0.16, bottom: 0.16 }, intraday);
     const rsiChart = mountChart(rsiHost, { top: 0.16, bottom: 0.16 }, intraday);
 
+    const tone = readPalette();
     const candle = priceChart.addSeries(CandlestickSeries, {
-      upColor: UP,
-      downColor: DOWN,
-      borderUpColor: UP,
-      borderDownColor: DOWN,
-      wickUpColor: UP,
-      wickDownColor: DOWN,
+      upColor: tone.upMark,
+      downColor: tone.down,
+      borderUpColor: tone.upMark,
+      borderDownColor: tone.down,
+      wickUpColor: tone.upMark,
+      wickDownColor: tone.down,
       priceLineWidth: 1,
     });
     const volume = priceChart.addSeries(HistogramSeries, {
@@ -214,14 +248,14 @@ export function ChartCanvas({
       lastValueVisible: false,
     });
     const macdSignal = macdChart.addSeries(LineSeries, {
-      color: '#a68462',
+      color: SIGNAL,
       lineWidth: 1,
       priceLineVisible: false,
       lastValueVisible: false,
       crosshairMarkerVisible: false,
     });
     const macdLine = macdChart.addSeries(LineSeries, {
-      color: '#3f5c57',
+      color: tone.accent,
       lineWidth: 2,
       priceLineVisible: false,
       lastValueVisible: true,
@@ -237,7 +271,7 @@ export function ChartCanvas({
     });
 
     const rsiLine = rsiChart.addSeries(LineSeries, {
-      color: '#5c5270',
+      color: RSI,
       lineWidth: 2,
       priceLineVisible: false,
       lastValueVisible: true,
@@ -329,29 +363,80 @@ export function ChartCanvas({
       if (typeof id === 'string' && id && id !== 'selection') onAnnRef.current(id);
       else onBgRef.current();
     };
-    priceChart.subscribeClick(onClick);
-    macdChart.subscribeClick(onClick);
-    rsiChart.subscribeClick(onClick);
-
     const listenMenu = (chartId: MenuState['chart'], pane: HTMLDivElement, chart: IChartApi, series: ISeriesApi<'Candlestick' | 'Line'>) => {
-      const handler = (event: MouseEvent) => {
-        event.preventDefault();
+      const openAt = (clientX: number, clientY: number, touch: boolean) => {
         const rect = pane.getBoundingClientRect();
-        const x = event.clientX - rect.left;
-        const y = event.clientY - rect.top;
+        const x = clientX - rect.left;
+        const y = clientY - rect.top;
         const time = chart.timeScale().coordinateToTime(x);
         const price = series.coordinateToPrice(y);
         const bar = barByTime(time ?? undefined, frameRef.current.bars);
         onMenuRef.current({
-          x: event.clientX,
-          y: event.clientY,
+          x: clientX,
+          y: clientY,
           chart: chartId,
           iso: bar?.iso ?? null,
           price: price == null ? null : price,
+          touch,
         });
       };
+      const handler = (event: MouseEvent) => {
+        event.preventDefault();
+        openAt(event.clientX, event.clientY, false);
+      };
+      let pressTimer = 0;
+      let suppressClick = false;
+      let origin = { x: 0, y: 0, id: -1 };
+      const cancelPress = () => {
+        if (!pressTimer) return;
+        window.clearTimeout(pressTimer);
+        pressTimer = 0;
+      };
+      const onPointerDown = (event: PointerEvent) => {
+        if (event.pointerType === 'mouse' || selectingRef.current) return;
+        if (!event.isPrimary) {
+          cancelPress();
+          return;
+        }
+        origin = { x: event.clientX, y: event.clientY, id: event.pointerId };
+        cancelPress();
+        pressTimer = window.setTimeout(() => {
+          pressTimer = 0;
+          suppressClick = true;
+          openAt(origin.x, origin.y, true);
+        }, 480);
+      };
+      const onPointerMove = (event: PointerEvent) => {
+        if (!pressTimer || event.pointerId !== origin.id) return;
+        if (Math.hypot(event.clientX - origin.x, event.clientY - origin.y) > 10) cancelPress();
+      };
+      const onPointerEnd = (event: PointerEvent) => {
+        if (event.pointerId !== origin.id) return;
+        cancelPress();
+        if (suppressClick) window.setTimeout(() => { suppressClick = false; }, 500);
+      };
+      const wrappedClick = (param: MouseEventParams) => {
+        if (suppressClick) {
+          suppressClick = false;
+          return;
+        }
+        onClick(param);
+      };
       pane.addEventListener('contextmenu', handler);
-      return () => pane.removeEventListener('contextmenu', handler);
+      pane.addEventListener('pointerdown', onPointerDown);
+      pane.addEventListener('pointermove', onPointerMove);
+      pane.addEventListener('pointerup', onPointerEnd);
+      pane.addEventListener('pointercancel', onPointerEnd);
+      chart.subscribeClick(wrappedClick);
+      return () => {
+        cancelPress();
+        pane.removeEventListener('contextmenu', handler);
+        pane.removeEventListener('pointerdown', onPointerDown);
+        pane.removeEventListener('pointermove', onPointerMove);
+        pane.removeEventListener('pointerup', onPointerEnd);
+        pane.removeEventListener('pointercancel', onPointerEnd);
+        chart.unsubscribeClick(wrappedClick);
+      };
     };
     const removeMenus = [
       listenMenu('price', pricePane, priceChart, candle),
@@ -396,6 +481,15 @@ export function ChartCanvas({
   }, [frame, history]);
 
   useEffect(() => {
+    const api = readyRef.current;
+    if (!api) return;
+    const scale = { rightPriceScale: { minimumWidth: compact ? 62 : 76 } };
+    api.priceChart.applyOptions(scale);
+    api.macdChart.applyOptions(scale);
+    api.rsiChart.applyOptions(scale);
+  }, [compact]);
+
+  useEffect(() => {
     if (hoverTime == null) {
       onHoverRef.current(null);
       return;
@@ -412,7 +506,7 @@ export function ChartCanvas({
   const rsi = frame.rsi[index];
 
   return (
-    <div className={styles.stack}>
+    <div className={`${styles.stack} ${compact ? styles.compact : ''}`}>
       <section
         ref={pricePaneRef}
         className={`${styles.pane} ${styles.price} ${selecting === 'price' ? styles.selecting : ''}`}
